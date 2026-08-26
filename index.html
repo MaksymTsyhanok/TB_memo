@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ТурБонжур — Генератор пам'яток</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --accent: #e05a1c;
+    --accent-dark: #c0392b;
+    --bg: #f7f5f2;
+    --card: #ffffff;
+    --border: #e8e4df;
+    --border-strong: #d0cac3;
+    --text: #1a1714;
+    --text-muted: #7a7269;
+    --text-light: #a89f96;
+    --success-bg: #edf7ed;
+    --success-border: #a3d9a5;
+    --success-text: #2d6a2f;
+    --error-bg: #fdecea;
+    --error-border: #f5c6c2;
+    --error-text: #8b1a14;
+    --info-bg: #eef4fb;
+    --info-border: #b8d4f0;
+    --info-text: #1a4f8a;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  body { font-family: 'Jost', sans-serif; font-weight: 400; background: var(--bg); color: var(--text); min-height: 100vh; }
+  header { background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); padding: 18px 24px; display: flex; align-items: center; gap: 14px; }
+  header .logo { font-family: 'Playfair Display', serif; color: #fff; font-size: 22px; letter-spacing: 0.02em; }
+  header .subtitle { color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 300; margin-top: 2px; }
+  .container { max-width: 860px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+  .tab-btn { flex: 1; padding: 10px; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 500; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--card); color: var(--text-muted); cursor: pointer; transition: all 0.15s; }
+  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  #upload-zone { border: 2px dashed var(--border-strong); border-radius: var(--radius); padding: 36px 20px; text-align: center; background: var(--card); cursor: pointer; transition: border-color 0.15s; margin-bottom: 16px; }
+  #upload-zone:hover, #upload-zone.drag { border-color: var(--accent); }
+  #upload-zone .icon { font-size: 36px; margin-bottom: 10px; }
+  #upload-zone p { font-size: 15px; color: var(--text-muted); }
+  #upload-zone span { font-size: 13px; color: var(--text-light); }
+  #file-input { display: none; }
+  #preview-area { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+  .preview-img { position: relative; width: 120px; height: 90px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border); }
+  .preview-img img { width: 100%; height: 100%; object-fit: cover; }
+  .preview-img .remove { position: absolute; top: 3px; right: 3px; width: 20px; height: 20px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 50%; border: none; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+
+  #parse-btn { width: 100%; padding: 11px; font-family: 'Jost', sans-serif; font-size: 14px; font-weight: 500; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--card); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  #parse-btn:hover { background: var(--bg); }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; }
+  .card-title { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+  .card-title .ico { font-size: 15px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  label.field-label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .field-hint { font-size: 11px; color: var(--text-light); margin-top: 3px; font-style: italic; }
+
+  input[type="text"], input[type="datetime-local"], textarea, select {
+    width: 100%; font-family: 'Jost', sans-serif; font-size: 13px; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; outline: none; transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, input[type="datetime-local"]:focus, textarea:focus, select:focus { border-color: var(--accent); background: #fff; }
+  input::placeholder, textarea::placeholder { color: var(--text-light); font-style: italic; }
+  textarea { resize: vertical; }
+
+  /* Transfer rows */
+  .transfer-list { display: grid; gap: 8px; margin-bottom: 10px; }
+  .transfer-row { display: grid; grid-template-columns: 160px 1fr 1fr auto; gap: 8px; align-items: end; background: var(--bg); border-radius: var(--radius-sm); padding: 10px 12px; border: 1px solid var(--border); }
+  .transfer-row .remove-row { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; cursor: pointer; color: var(--text-muted); font-size: 13px; white-space: nowrap; }
+  .transfer-row .remove-row:hover { border-color: var(--accent); color: var(--accent); }
+  #add-transfer-btn { padding: 8px 14px; font-family: 'Jost', sans-serif; font-size: 13px; border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); background: none; color: var(--text-muted); cursor: pointer; }
+  #add-transfer-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .bag-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; }
+  .bag-card:last-child { margin-bottom: 0; }
+  .bag-title { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+
+  .steps { display: flex; gap: 6px; margin-bottom: 24px; font-size: 12px; color: var(--text-light); flex-wrap: wrap; }
+  .step { display: flex; align-items: center; gap: 5px; }
+  .step .num { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-arrow { color: var(--border-strong); }
+
+  .lang-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .lang-row label { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+  .lang-row select { width: auto; }
+
+  #generate-btn { width: 100%; padding: 14px; font-family: 'Playfair Display', serif; font-size: 17px; border: none; border-radius: var(--radius); background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); color: #fff; cursor: pointer; letter-spacing: 0.02em; transition: opacity 0.15s; }
+  #generate-btn:hover { opacity: 0.92; }
+  #generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status { display: none; margin-top: 12px; padding: 11px 16px; border-radius: var(--radius-sm); font-size: 13px; }
+  .status.info { background: var(--info-bg); border: 1px solid var(--info-border); color: var(--info-text); display: block; }
+  .status.success { background: var(--success-bg); border: 1px solid var(--success-border); color: var(--success-text); display: block; }
+  .status.error { background: var(--error-bg); border: 1px solid var(--error-border); color: var(--error-text); display: block; }
+
+  @media (max-width: 640px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    .transfer-row { grid-template-columns: 1fr 1fr; }
+    .transfer-row .remove-row { grid-column: span 2; }
+    header { padding: 14px 16px; }
+    .container { padding: 16px 12px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">✈ ТурБонжур</div>
+    <div class="subtitle">Генератор пам'яток туриста</div>
+  </div>
+</header>
+
+<div class="container">
+<div class="steps">
+    <div class="step"><div class="num">1</div> Завантаж скриншоти</div>
+    <div class="step-arrow">→</div>
+    <div class="step"><div class="num">2</div> AI заповнює форму</div>
+    <div class="step-arrow">→</div>
+    <div class="step"><div class="num">3</div> Перевір і доповни</div>
+    <div class="step-arrow">→</div>
+    <div class="step"><div class="num">4</div> Ctrl+P → PDF</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('screenshots')">📷 Скриншоти Пульс</button>
+    <button class="tab-btn" onclick="setTab('manual')">✏️ Вручну</button>
+  </div>
+
+  <div id="tab-screenshots">
+    <div id="upload-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="event.preventDefault(); this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <div class="icon">🖼️</div>
+      <p>Перетягни скриншоти сюди або натисни для вибору</p>
+      <span>PNG, JPG — можна кілька одразу</span>
+    </div>
+    <input type="file" id="file-input" accept="image/*" multiple onchange="handleFiles(this.files)">
+    <div id="preview-area"></div>
+    <button id="parse-btn" onclick="parseScreenshots()"><span>🤖</span> Розпізнати дані з скриншотів</button>
+    <div id="parse-status" class="status"></div>
+  </div>
+
+  <div id="tab-manual" style="display:none;">
+    <div class="status info">Заповніть поля форми нижче вручну.</div>
+  </div>
+
+  <div style="margin-top: 24px;">
+
+    <!-- Tour details -->
+    <div class="card">
+      <div class="card-title"><span class="ico">🗺️</span> Деталі туру</div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div><label class="field-label">Турист(и)</label><input id="f-tourists" type="text" placeholder="Марина Дорогань"></div>
+        <div><label class="field-label">Країна / Напрямок</label><input id="f-country" type="text" placeholder="Іспанія, о. Майорка"></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div><label class="field-label">Дата / час вильоту</label><input id="f-depart" type="text" placeholder="23.06.2026, 21:20"></div>
+        <div><label class="field-label">Дата / час повернення</label><input id="f-return" type="text" placeholder="07.07.2026, 09:10"></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div><label class="field-label">Аеропорт вильоту</label><input id="f-depart-airport" type="text" placeholder="Dublin Airport / DUB"></div>
+        <div><label class="field-label">Аеропорт прильоту</label><input id="f-arrival-airport" type="text" placeholder="Palma de Mallorca / PMI"></div>
+        <input type="hidden" id="f-depart-city">
+        <input type="hidden" id="f-depart-country">
+        <input type="hidden" id="f-arrival-city">
+        <input type="hidden" id="f-arrival-country">
+      </div>
+      <div style="margin-bottom:10px;"><label class="field-label">Готель</label><input id="f-hotel" type="text" placeholder="Sol Guadalupe, HB, Standard Room TRPL, 23.06–07.07.2026"></div>
+      <div class="grid-2">
+        <div><label class="field-label">Check-in</label><input id="f-hotel-checkin" type="text" placeholder="23.06.2026"></div>
+        <div><label class="field-label">Check-out</label><input id="f-hotel-checkout" type="text" placeholder="07.07.2026"></div>
+      </div>
+      <div style="margin-top:8px;"><label class="field-label">🏙️ City tax</label><input id="f-city-tax" type="text" placeholder="напр. €2 за особу на ніч, оплачується на місці"></div>
+
+      <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px;">
+        <button type="button" id="nearby-btn" onclick="findNearbyPlaces()"
+          style="width:100%; padding:9px; font-family:'Jost',sans-serif; font-size:13px; border:1px dashed var(--border-strong); border-radius:var(--radius-sm); background:none; color:var(--text-muted); cursor:pointer;">
+          🗺️ Знайти цікаві місця поруч з готелем
+        </button>
+        <label class="field-label" style="margin-top:8px;">Цікаві місця поруч (можна відредагувати)</label>
+        <textarea id="f-nearby-places" rows="3" placeholder="Натисніть кнопку вище, щоб AI знайшов місця, або впишіть вручну"></textarea>
+      </div>
+    </div>
+
+    <!-- Transfer -->
+    <div class="card">
+      <div class="card-title"><span class="ico">🚐</span> Трансфер</div>
+      <div class="bag-card">
+        <div class="bag-title">➡️ Аеропорт → готель</div>
+        <div class="grid-3">
+          <div><label class="field-label">Вид трансферу</label><select id="f-transfer-in-type"><option value="Індивідуальне авто">🚗 Індивідуальне авто</option><option value="Автобус">🚌 Автобус</option></select></div>
+          <div><label class="field-label">Дата</label><input id="f-transfer-in-date" type="text" placeholder="24.06.2026"></div>
+          <div><label class="field-label">Час</label><input id="f-transfer-in-time" type="text" placeholder="11:00"></div>
+        </div>
+      </div>
+      <div class="bag-card">
+        <div class="bag-title">⬅️ Готель → аеропорт</div>
+        <div class="grid-3" style="margin-bottom:8px;">
+          <div><label class="field-label">Вид трансферу</label><select id="f-transfer-out-type"><option value="Індивідуальне авто">🚗 Індивідуальне авто</option><option value="Автобус">🚌 Автобус</option></select></div>
+          <div><label class="field-label">Дата</label><input id="f-transfer-out-date" type="text" placeholder="07.07.2026"></div>
+          <div><label class="field-label">Час pickup</label><input id="f-transfer-out-pickup" type="text" placeholder="09:00"></div>
+        </div>
+        <div><label class="field-label">Місце зустрічі</label><select id="f-transfer-out-meeting"><option value="Lobby готелю">🏨 Lobby готелю</option><option value="Зупинка біля готелю">🚏 Зупинка біля готелю</option></select></div>
+      </div>
+      <div style="margin-top:10px;"><label class="field-label">📞 Контакти перевізника</label><input id="f-carrier" type="text" placeholder=""></div>
+    </div>
+
+    <!-- Insurance -->
+    <div class="card">
+      <div class="card-title"><span class="ico">🛡️</span> Страховка</div>
+      <input id="f-insurance" type="text" placeholder="Компанія, номер полісу, ліміт покриття...">
+    </div>
+
+    <!-- Contacts -->
+    <div class="card">
+      <div class="card-title"><span class="ico">📞</span> Контакти</div>
+      <div><label class="field-label">Менеджер ТурБонжур</label><input id="f-manager" type="text" placeholder="Ваше ім'я, +38098 89 000 72" value="+38098 89 000 72"></div>
+    </div>
+
+    <!-- Documents -->
+    <div class="card">
+      <div class="card-title"><span class="ico">📄</span> Документи</div>
+      <textarea id="f-documents" rows="2">Паспорт, страховка, ваучер, квитки, дозвіл для дитини, якщо потрібно.</textarea>
+    </div>
+
+    <!-- Seats -->
+    <div class="card">
+      <div class="card-title"><span class="ico">💺</span> Місця в літаку</div>
+      <div>
+        <label class="field-label">Тип призначення місць</label>
+        <select id="f-seats-auto">
+          <option value="Автоматичне призначення під час реєстрації">🎲 Автоматичне призначення під час реєстрації</option>
+          <option value="Місця поруч">🪑 Місця поруч</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Baggage -->
+    <div class="card">
+      <div class="card-title"><span class="ico">🧳</span> Багаж</div>
+
+      <div class="bag-card">
+        <div class="bag-title">👕 Особиста річ</div>
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div>
+            <label class="field-label">Кількість та вага</label>
+            <input id="f-personal-wt" type="text" value="1 місце для кожного, включено">
+          </div>
+          <div><label class="field-label">Габарити</label><input id="f-personal-size" type="text" value="40 × 30 × 20 см"></div>
+        </div>
+        <div><label class="field-label">Примітка</label><input id="f-personal-note" type="text" value="Сумка або рюкзак, кладеться під сидіння в літаку. Рідини — макс. 100 мл. Ріжучі та колючі предмети заборонені."></div>
+      </div>
+
+      <div class="bag-card">
+        <div class="bag-title">🎒 Ручна поклажа</div>
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div><label class="field-label">Кількість та вага</label><input id="f-carry-wt" type="text" value="1 місце, до 10 кг"></div>
+          <div><label class="field-label">Габарити</label><input id="f-carry-size" type="text" value="55 × 40 × 20 см"></div>
+        </div>
+        <div><label class="field-label">Примітка</label><input id="f-carry-note" type="text" value="Валіза, кладеться на верхню полицю в літаку. Рідини — макс. 100 мл. Ріжучі та колючі предмети заборонені."></div>
+      </div>
+
+      <div class="bag-card">
+        <div class="bag-title">🧳 Зареєстрований багаж</div>
+        <div class="grid-2" style="margin-bottom:8px;">
+          <div><label class="field-label">Кількість та вага</label><input id="f-bag-wt" type="text" value="1 місце, до 20 кг"></div>
+          <div><label class="field-label">Габарити</label><input id="f-bag-size" type="text" value="80 × 120 × 120 см"></div>
+        </div>
+        <div>
+          <label class="field-label">Примітка</label>
+          <input id="f-bag-note" type="text" placeholder="">
+          
+        </div>
+      </div>
+    </div>
+
+    <div class="lang-row">
+      <label>Мова пам'ятки:</label>
+      <select id="f-lang">
+        <option value="uk">🇺🇦 Українська</option>
+        <option value="ru">🇷🇺 Русский</option>
+      </select>
+    </div>
+
+    <button id="generate-btn" onclick="generateMemo()">✈ Створити пам'ятку туриста</button>
+    <div id="gen-status" class="status"></div>
+
+  </div>
+</div>
+
+<script>
+
+const PROXY_URL = 'https://tb-proxy-production-7507.up.railway.app/proxy';
+
+// ── Tabs ─────────────────────────────────────────────
+function setTab(tab) {
+  document.getElementById('tab-screenshots').style.display = tab === 'screenshots' ? 'block' : 'none';
+  document.getElementById('tab-manual').style.display = tab === 'manual' ? 'block' : 'none';
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'screenshots') || (i === 1 && tab === 'manual'));
+  });
+}
+
+// ── Transfer helpers ───────────────────────────────────
+function getTransferData() {
+  const get = id => (document.getElementById(id)||{}).value||'';
+  return {
+    inType: get('f-transfer-in-type'),
+    inDate: get('f-transfer-in-date'),
+    inTime: get('f-transfer-in-time'),
+    outType: get('f-transfer-out-type'),
+    outDate: get('f-transfer-out-date'),
+    outPickup: get('f-transfer-out-pickup'),
+    outMeeting: get('f-transfer-out-meeting')
+  };
+}
+
+function fillTransferFields(parsed) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el && value) el.value = value;
+  };
+
+  if (parsed.transfer_in) {
+    set('f-transfer-in-type', parsed.transfer_in.type);
+    set('f-transfer-in-date', parsed.transfer_in.date);
+    set('f-transfer-in-time', parsed.transfer_in.time);
+  }
+  if (parsed.transfer_out) {
+    set('f-transfer-out-type', parsed.transfer_out.type);
+    set('f-transfer-out-date', parsed.transfer_out.date);
+    set('f-transfer-out-pickup', parsed.transfer_out.pickup_time || parsed.transfer_out.time);
+    set('f-transfer-out-meeting', parsed.transfer_out.meeting_point);
+  }
+
+  // Fallback for older AI JSON: transfers[0] = airport → hotel, transfers[1] = hotel → airport
+  if (parsed.transfers && parsed.transfers.length) {
+    const first = parsed.transfers[0] || {};
+    const second = parsed.transfers[1] || {};
+    set('f-transfer-in-type', first.type);
+    set('f-transfer-in-date', first.date);
+    set('f-transfer-in-time', first.time);
+    set('f-transfer-out-type', second.type);
+    set('f-transfer-out-date', second.date);
+    set('f-transfer-out-pickup', second.pickup_time || second.time);
+    set('f-transfer-out-meeting', second.meeting_point);
+  }
+}
+
+// ── File upload ───────────────────────────────────────
+let uploadedFiles = [];
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+}
+function handleFiles(files) {
+  Array.from(files).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    uploadedFiles.push(f);
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const div = document.createElement('div');
+      div.className = 'preview-img';
+      div.innerHTML = `<img src="${ev.target.result}"><button class="remove" onclick="uploadedFiles[${uploadedFiles.length-1}]=null; this.parentNode.remove()">✕</button>`;
+      document.getElementById('preview-area').appendChild(div);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+// ── Parse screenshots ─────────────────────────────────
+async function parseScreenshots() {
+  
+  const files = uploadedFiles.filter(Boolean);
+  if (!files.length) { showStatus('parse-status', 'Завантажте хоча б один скриншот', 'error'); return; }
+  showStatus('parse-status', '🤖 Розпізнаю дані зі скриншотів...', 'info');
+  const imageContents = await Promise.all(files.map(f => toBase64(f)));
+  const content = [
+    ...imageContents.map(({base64, type}) => ({ type: 'image', source: { type: 'base64', media_type: type, data: base64 } })),
+    { type: 'text', text: `Розпізнай дані туристичної заявки з цих скриншотів та поверни ЛИШЕ JSON без пояснень та markdown:
+{
+  "tourists": "ПІБ туристів",
+  "country": "країна/напрямок",
+  "depart": "дата та час вильоту",
+  "return": "дата та час повернення",
+  "depart_airport": "аеропорт вильоту (назва або код)",
+  "depart_city": "місто вильоту — ОБОВ\'ЯЗКОВО визнач навіть якщо не вказано явно (наприклад з аеропорту Dublin = Дублін)",
+  "depart_country": "країна вильоту — ОБОВ\'ЯЗКОВО визнач за містом або аеропортом (Dublin = Ірландія, Palma = Іспанія тощо)",
+  "arrival_airport": "аеропорт прильоту (назва або код)",
+  "arrival_city": "місто прильоту — ОБОВ\'ЯЗКОВО визнач навіть якщо не вказано явно",
+  "arrival_country": "країна прильоту — ОБОВ\'ЯЗКОВО визнач за містом або аеропортом",
+  "hotel": "назва готелю, харчування, тип кімнати, дати проживання",
+  "hotel_checkin": "check-in",
+  "hotel_checkout": "check-out",
+  "transfer_in": {"type": "вид трансферу", "date": "дата дд.мм.рррр", "time": "час гг:хх"},
+  "transfer_out": {"type": "вид трансферу", "date": "дата дд.мм.рррр", "pickup_time": "час pickup гг:хх", "meeting_point": "місце зустрічі"},
+
+  "insurance": "страховка",
+  "manager": "менеджер",
+  "documents": "документи",
+  "seats_auto": "автоматичне призначення місць під час реєстрації",
+  "seats_together": "місця поруч / не поруч / докуплені"
+}
+Якщо поле не знайдено — порожній рядок або порожній масив.` }
+  ];
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4000, messages: [{ role: 'user', content }] })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = data.content[0].text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    const map = {
+      tourists:'f-tourists',
+      country:'f-country',
+      depart:'f-depart',
+      return:'f-return',
+      depart_airport:'f-depart-airport',
+      depart_city:'f-depart-city',
+      depart_country:'f-depart-country',
+      arrival_airport:'f-arrival-airport',
+      arrival_city:'f-arrival-city',
+      arrival_country:'f-arrival-country',
+      hotel:'f-hotel',
+      // hotel_checkin handled separately below
+      // hotel_checkout handled separately below
+      // carrier not auto-filled
+      insurance:'f-insurance',
+      manager:'f-manager',
+      documents:'f-documents',
+      seats_auto:'f-seats-auto',
+      seats_together:'f-seats-together'
+    };
+    for (const [key, id] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (el && parsed[key]) el.value = parsed[key];
+    }
+    fillTransferFields(parsed);
+    // Auto-fill check-in/out: prepend date to existing time text
+    if (parsed.hotel_checkin) {
+      const ciEl = document.getElementById('f-hotel-checkin');
+      const ciTime = ciEl.value.replace(/^[\d\.]+\s*/,'') || 'після 14:00';
+      ciEl.value = parsed.hotel_checkin + ' ' + ciTime;
+    }
+    if (parsed.hotel_checkout) {
+      const coEl = document.getElementById('f-hotel-checkout');
+      const coTime = coEl.value.replace(/^[\d\.]+\s*/,'') || 'до 12:00';
+      coEl.value = parsed.hotel_checkout + ' ' + coTime;
+    }
+    showStatus('parse-status', '✅ Дані розпізнано! Перевірте поля форми нижче.', 'success');
+  } catch(e) {
+    showStatus('parse-status', '❌ Помилка: ' + e.message, 'error');
+  }
+}
+
+function toBase64(file) {
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = ev => resolve({ base64: ev.target.result.split(',')[1], type: file.type });
+    r.readAsDataURL(file);
+  });
+}
+
+// ── Nearby places (web search) ─────────────────────────
+async function findNearbyPlaces() {
+  const btn = document.getElementById('nearby-btn');
+  const hotel = document.getElementById('f-hotel').value.trim();
+  const country = document.getElementById('f-country').value.trim();
+  const arrivalCity = document.getElementById('f-arrival-city').value.trim();
+
+  if (!hotel) {
+    showStatus('parse-status', '⚠️ Спочатку заповніть поле "Готель"', 'error');
+    return;
+  }
+
+  const place = arrivalCity || country;
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = '🔍 Шукаю...';
+
+  const prompt = `Знайди 4-5 цікавих туристичних місць поруч з готелем "${hotel}" ${place ? `у ${place}` : ''}. Для кожного вкажи назву, приблизну відстань від готелю та коротке (1 речення) пояснення чому варто відвідати. Поверни ЛИШЕ звичайний текст у форматі списку, без markdown-зірочок, без JSON, без пояснень — просто готовий текст для вставки в пам'ятку туриста українською мовою.`;
+
+  try {
+    const res = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
+    const result = textBlocks.join('\n').trim();
+
+    if (!result) throw new Error('Порожня відповідь від AI');
+    document.getElementById('f-nearby-places').value = result;
+    showStatus('parse-status', '✅ Місця знайдено! Перевірте текст нижче.', 'success');
+  } catch (e) {
+    showStatus('parse-status', '❌ Помилка: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+// ── Generate memo ─────────────────────────────────────
+function generateMemo() {
+  const get = id => (document.getElementById(id)||{}).value||'';
+  const lang = get('f-lang') || 'uk';
+  const t = translations[lang] || translations.uk;
+  const transferData = getTransferData();
+
+  const data = {
+    tourists: get('f-tourists').trim(),
+    country: get('f-country').trim(),
+    depart: get('f-depart').trim(),
+    returnDate: get('f-return').trim(),
+    departAirport: get('f-depart-airport').trim(),
+    departCity: get('f-depart-city').trim(),
+    departCountry: get('f-depart-country').trim(),
+    arrivalAirport: get('f-arrival-airport').trim(),
+    arrivalCity: get('f-arrival-city').trim(),
+    arrivalCountry: get('f-arrival-country').trim(),
+    hotel: get('f-hotel').trim(),
+    cityTax: get('f-city-tax').trim(),
+    hotelCheckin: get('f-hotel-checkin').trim(),
+    hotelCheckout: get('f-hotel-checkout').trim(),
+    transferInType: transferData.inType.trim(),
+    transferInDate: transferData.inDate.trim(),
+    transferInTime: transferData.inTime.trim(),
+    transferOutType: transferData.outType.trim(),
+    transferOutDate: transferData.outDate.trim(),
+    transferOutPickup: transferData.outPickup.trim(),
+    transferOutMeeting: transferData.outMeeting.trim(),
+    carrier: get('f-carrier').trim(),
+    insurance: get('f-insurance').trim(),
+    manager: get('f-manager').trim(),
+    documents: (get('f-documents').trim() || t.defaultDocs),
+    seatsAuto: get('f-seats-auto').trim(),
+    seatsTogether: get('f-seats-together').trim(),
+    personalWt: get('f-personal-wt').trim(),
+    personalSize: get('f-personal-size').trim(),
+    personalNote: get('f-personal-note').trim(),
+    carryWt: get('f-carry-wt').trim(),
+    carrySize: get('f-carry-size').trim(),
+    carryNote: get('f-carry-note').trim(),
+    bagWt: get('f-bag-wt').trim(),
+    bagSize: get('f-bag-size').trim(),
+    bagNote: cleanBaggageNote(get('f-bag-note').trim()),
+    nearbyPlaces: get('f-nearby-places').trim()
+  };
+
+  const html = buildPremiumMemoHtml(data, t, lang);
+  const w = window.open('', '_blank');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+    showStatus('gen-status', '✅ Пам\'ятку відкрито у новому вікні. Натисніть Ctrl+P → Зберегти як PDF.', 'success');
+  } else {
+    showStatus('gen-status', '⚠️ Браузер заблокував вікно. Дозвольте спливаючі вікна та спробуйте ще раз.', 'error');
+  }
+}
+
+const translations = {
+  uk: {
+    memoTitle: "Пам'ятка туриста",
+    tripTo: 'Подорож до',
+    dates: 'Дати туру',
+    route: 'Маршрут',
+    departure: 'Виліт',
+    returnFlight: 'Повернення',
+    date: 'Дата',
+    time: 'Час',
+    airport: 'Аеропорт',
+    tourDetails: 'Деталі туру',
+    hotel: 'Готель',
+    hotelDetails: 'Деталі готелю',
+    checkin: 'Check-in',
+    checkout: 'Check-out',
+    transfer: 'Трансфер',
+    airportToHotel: 'Аеропорт → готель',
+    hotelToAirport: 'Готель → аеропорт',
+    transferType: 'Вид',
+    pickup: 'Pickup',
+    meetingPoint: 'Місце зустрічі',
+    carrierContacts: 'Контакти перевізника',
+    insurance: 'Страховка',
+    manager: 'Ваш менеджер',
+    documents: 'Документи',
+    flightDetails: 'Деталі перельоту',
+    seats: 'Місця в літаку',
+    baggage: 'Багаж',
+    nearbyPlaces: 'Цікаві місця поруч',
+    personalItem: 'Особиста річ',
+    handLuggage: 'Ручна поклажа',
+    checkedBag: 'Зареєстрований багаж',
+    quantity: 'Кількість / вага',
+    dimensions: 'Габарити',
+    note: 'Примітка',
+    notSpecified: 'Не вказано',
+    notIncluded: 'Не включено',
+    defaultDocs: 'Паспорт, страховка, ваучер, квитки, дозвіл для дитини, якщо потрібно.',
+    greeting: 'Дякую, що довірили ТурБонжур організацію вашої подорожі. Бажаю комфортної подорожі та справжнього задоволення від кожної миті відпочинку.',
+    important: 'Важливо перед вильотом',
+    importantText: 'Перевірте час рейсу за 24 години до вильоту. Рекомендуємо прибути в аеропорт за 2–3 години до вильоту.',
+    farewell: 'Бажаю вам чудового відпочинку та яскравих вражень. 🌟',
+    footer: "З любов'ю до подорожей — ТурБонжур | tourbonjour.com"
+  },
+  ru: {
+    memoTitle: 'Памятка туриста',
+    tripTo: 'Путешествие в',
+    dates: 'Даты тура',
+    route: 'Маршрут',
+    departure: 'Вылет',
+    returnFlight: 'Возвращение',
+    date: 'Дата',
+    time: 'Время',
+    airport: 'Аэропорт',
+    tourDetails: 'Детали тура',
+    hotel: 'Отель',
+    hotelDetails: 'Детали отеля',
+    checkin: 'Check-in',
+    checkout: 'Check-out',
+    transfer: 'Трансфер',
+    airportToHotel: 'Аэропорт → отель',
+    hotelToAirport: 'Отель → аэропорт',
+    transferType: 'Тип',
+    pickup: 'Pickup',
+    meetingPoint: 'Место встречи',
+    carrierContacts: 'Контакты перевозчика',
+    insurance: 'Страховка',
+    manager: 'Ваш менеджер',
+    documents: 'Документы',
+    flightDetails: 'Детали перелета',
+    seats: 'Места в самолете',
+    baggage: 'Багаж',
+    nearbyPlaces: 'Интересные места рядом',
+    personalItem: 'Личная вещь',
+    handLuggage: 'Ручная кладь',
+    checkedBag: 'Зарегистрированный багаж',
+    quantity: 'Количество / вес',
+    dimensions: 'Габариты',
+    note: 'Примечание',
+    notSpecified: 'Не указано',
+    notIncluded: 'Не включено',
+    defaultDocs: 'Паспорт, страховка, ваучер, билеты, разрешение для ребенка, если нужно.',
+    greeting: 'Спасибо, что доверили ТурБонжур организацию вашего путешествия. Желаю комфортной поездки и настоящего удовольствия от каждого момента отдыха.',
+    important: 'Важно перед вылетом',
+    importantText: 'Проверьте время рейса за 24 часа до вылета. Рекомендуем приехать в аэропорт за 2–3 часа до вылета.',
+    farewell: 'Желаю вам чудесного отдыха и ярких впечатлений. 🌟',
+    footer: 'С любовью к путешествиям — ТурБонжур | tourbonjour.com'
+  }
+};
+
+function esc(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function exists(value) {
+  const v = String(value || '').trim();
+  return v && v !== '—' && v !== '-';
+}
+
+function cleanBaggageNote(value) {
+  return String(value || '')
+    .replace(/місц[яа][^.;,]*(поруч|рандомн|автоматич)[^.;,]*/gi, '')
+    .replace(/мест[ао][^.;,]*(рядом|случайн|автоматич)[^.;,]*/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^\s*[.;,]\s*|\s*[.;,]\s*$/g, '')
+    .trim();
+}
+
+function splitDateTime(value) {
+  const raw = String(value || '').trim();
+  const match = raw.match(/^(.*?)(?:[,\s]*(?:о|at|в)?\s*)(\d{1,2}[:.]\d{2})(?:\s|$)/i);
+  if (!match) return { date: raw, time: '' };
+  return { date: match[1].replace(/[,\s]+$/,'').trim() || raw, time: match[2].replace('.', ':') };
+}
+
+const CITY_COUNTRY_MEMO = {
+  'дублін': 'Дублін, Ірландія', 'dublin': 'Дублін, Ірландія',
+  'майорка': 'Майорка, Іспанія', 'mallorca': 'Майорка, Іспанія',
+  'пальма': 'Майорка, Іспанія', 'palma': 'Майорка, Іспанія',
+  'барселона': 'Барселона, Іспанія', 'barcelona': 'Барселона, Іспанія',
+  'мадрид': 'Мадрид, Іспанія', 'madrid': 'Мадрид, Іспанія',
+  'рим': 'Рим, Італія', 'rome': 'Рим, Італія',
+  'мілан': 'Мілан, Італія', 'milan': 'Мілан, Італія',
+  'париж': 'Париж, Франція', 'paris': 'Париж, Франція',
+  'лондон': 'Лондон, Велика Британія', 'london': 'Лондон, Велика Британія',
+  'варшава': 'Варшава, Польща', 'warsaw': 'Варшава, Польща',
+  'прага': 'Прага, Чехія', 'prague': 'Прага, Чехія',
+  'відень': 'Відень, Австрія', 'vienna': 'Відень, Австрія',
+  'амстердам': 'Амстердам, Нідерланди', 'amsterdam': 'Амстердам, Нідерланди',
+  'берлін': 'Берлін, Німеччина', 'berlin': 'Берлін, Німеччина',
+  'афіни': 'Афіни, Греція', 'athens': 'Афіни, Греція',
+  'хургада': 'Хургада, Єгипет', 'hurghada': 'Хургада, Єгипет',
+  'шарм': 'Шарм-ель-Шейх, Єгипет', 'sharm': 'Шарм-ель-Шейх, Єгипет',
+  'анталія': 'Анталія, Туреччина', 'antalya': 'Анталія, Туреччина',
+  'стамбул': 'Стамбул, Туреччина', 'istanbul': 'Стамбул, Туреччина',
+  'дубай': 'Дубай, ОАЕ', 'dubai': 'Дубай, ОАЕ',
+  'бангкок': 'Бангкок, Таїланд', 'bangkok': 'Бангкок, Таїланд',
+  'балі': 'Балі, Індонезія', 'bali': 'Балі, Індонезія',
+  'лісабон': 'Лісабон, Португалія', 'lisbon': 'Лісабон, Португалія',
+  'будапешт': 'Будапешт, Угорщина', 'budapest': 'Будапешт, Угорщина',
+  'київ': 'Київ, Україна', 'kyiv': 'Київ, Україна',
+  'тенеріфе': 'Тенеріфе, Іспанія', 'tenerife': 'Тенеріфе, Іспанія',
+  'ібіца': 'Ібіца, Іспанія', 'ibiza': 'Ібіца, Іспанія',
+};
+
+function cityWithCountry(value, city, country) {
+  const raw = String(value || '').trim();
+  const cityStr = String(city || '').trim();
+  const countryStr = String(country || '').trim();
+
+  // 1. AI gave us both city and country
+  if (cityStr && countryStr) return `${cityStr}, ${countryStr}`;
+
+  // 2. Check city field in hardcoded map
+  if (cityStr) {
+    const cityLow = cityStr.toLowerCase();
+    for (const [key, label] of Object.entries(CITY_COUNTRY_MEMO)) {
+      if (cityLow.includes(key)) return label;
+    }
+    // AI gave city but no country — return city as is
+    if (cityStr) return cityStr;
+  }
+
+  // 3. Check raw airport value in hardcoded map
+  if (!raw) return '—';
+  const low = raw.toLowerCase();
+  for (const [key, label] of Object.entries(CITY_COUNTRY_MEMO)) {
+    if (low.includes(key)) return label;
+  }
+
+  // 4. Fallback: first part before slash/comma
+  const parts = raw.split(/[\/|,–—]/).map(x => x.trim()).filter(Boolean);
+  return parts[0] || raw;
+}
+
+function airportCode(value) {
+  return cityWithCountry(value);
+}
+
+function valueOrDash(value, fallback) {
+  return exists(value) ? esc(value) : esc(fallback || '—');
+}
+
+function kv(label, value, fallback) {
+  if (!exists(value) && !fallback) return '';
+  return `<div class="kv"><div class="k">${esc(label)}</div><div class="v">${valueOrDash(value, fallback)}</div></div>`;
+}
+
+function badge(value) {
+  if (!exists(value)) return '';
+  return `<span class="badge">${esc(value)}</span>`;
+}
+
+function section(title, inner, extraClass) {
+  if (!String(inner || '').trim()) return '';
+  return `<section class="section ${extraClass || ''}"><h2>${title}</h2>${inner}</section>`;
+}
+
+function compactAirportLabel(value) {
+  return cityWithCountry(String(value || '').trim());
+}
+
+function buildPremiumMemoHtml(d, t, lang) {
+  const depart = splitDateTime(d.depart);
+  const ret = splitDateTime(d.returnDate);
+  const routeFrom = cityWithCountry(d.departAirport, d.departCity, d.departCountry);
+  const routeTo = cityWithCountry(d.arrivalAirport, d.arrivalCity, d.arrivalCountry);
+  const baseHref = window.location.href.replace(/[^\/]*$/, '');
+
+  const docs = String(d.documents || t.defaultDocs)
+    .split(/[,;\n]/)
+    .map(x => x.trim())
+    .filter(Boolean)
+    .map(x => `<span>${esc(x)}</span>`)
+    .join('');
+
+  const seatLine = [d.seatsAuto, d.seatsTogether].filter(exists).map(esc).join(' · ');
+
+  const bagCols = [
+    { title: t.personalItem, icon: '👕', wt: d.personalWt, size: d.personalSize, note: d.personalNote },
+    { title: t.handLuggage, icon: '🎒', wt: d.carryWt, size: d.carrySize, note: d.carryNote },
+    { title: t.checkedBag, icon: '🧳', wt: d.bagWt || t.notIncluded, size: d.bagWt ? d.bagSize : '', note: d.bagWt ? d.bagNote : '' }
+  ].map(item => `
+    <div class="bag-col">
+      <div class="bag-head"><span>${item.icon}</span>${esc(item.title)}</div>
+      ${kv(t.quantity, item.wt, t.notSpecified)}
+      ${kv(t.dimensions, item.size)}
+      ${kv(t.note, item.note)}
+    </div>`).join('');
+
+  const hotelInner = `
+    <div class="hotel-name">${valueOrDash(d.hotel, t.notSpecified)}</div>
+    <div class="hotel-meta">
+      ${badge(d.hotelCheckin ? `${t.checkin}: ${d.hotelCheckin}` : '')}
+      ${badge(d.hotelCheckout ? `${t.checkout}: ${d.hotelCheckout}` : '')}
+      ${d.cityTax ? badge(`🏙️ City tax: ${d.cityTax}`) : ''}
+    </div>`;
+
+  const transferInner = `
+    <div class="timeline-grid">
+      <div class="transfer-card">
+        <div class="direction">${esc(t.airportToHotel)}</div>
+        <div class="transfer-main">${valueOrDash(d.transferInType, t.notSpecified)}</div>
+        <div class="transfer-details">${valueOrDash(d.transferInDate, '—')} · ${valueOrDash(d.transferInTime, '—')}</div>
+      </div>
+      <div class="transfer-card">
+        <div class="direction">${esc(t.hotelToAirport)}</div>
+        <div class="transfer-main">${valueOrDash(d.transferOutType, t.notSpecified)}</div>
+        <div class="transfer-details">${valueOrDash(d.transferOutDate, '—')} · ${esc(t.pickup)} ${valueOrDash(d.transferOutPickup, '—')}</div>
+        ${exists(d.transferOutMeeting) ? `<div class="meeting">${esc(t.meetingPoint)}: ${esc(d.transferOutMeeting)}</div>` : ''}
+      </div>
+    </div>
+    ${exists(d.carrier) ? `<div class="carrier">${esc(t.carrierContacts)}: <strong>${esc(d.carrier)}</strong></div>` : ''}`;
+
+  const insuranceContacts = `
+    ${exists(d.insurance) ? `<div class="mini-card soft">${kv(t.insurance, d.insurance)}</div>` : ''}
+    ${exists(d.manager) ? `<div class="mini-card soft">${kv(t.manager, d.manager)}</div>` : ''}`;
+
+  return `<!DOCTYPE html>
+<html lang="${esc(lang)}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<base href="${esc(baseHref)}">
+<title>${esc(t.memoTitle)} — ${esc(d.tourists || '')}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 8mm 9mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Jost', Arial, sans-serif; color: #1a1714; background: #fff; font-size: 10.5px; line-height: 1.28; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .memo { max-width: 760px; margin: 0 auto; }
+  .hero { position: relative; overflow: hidden; color: #fff; background: linear-gradient(135deg, #e05a1c 0%, #c0392b 100%); border-radius: 15px; padding: 13px 17px; display: flex; justify-content: space-between; gap: 18px; align-items: center; margin-bottom: 6px; }
+  /* arc removed */
+  .brand { position: relative; z-index: 1; display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .brand img { height: 88px; width: auto; max-width: 260px; border-radius: 14px; background: #fff; padding: 6px; box-shadow: 0 2px 8px rgba(0,0,0,.15); image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
+  .brand-copy .doc-type { text-transform: uppercase; letter-spacing: .17em; font-size: 8.5px; font-weight: 500; opacity: .82; margin-bottom: 4px; }
+  .brand-copy .route-small { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; font-weight: 700; line-height: 1; }
+  .traveler { position: relative; z-index: 1; text-align: right; min-width: 190px; }
+  .traveler .name { font-size: 16px; font-weight: 600; line-height: 1.05; }
+  .traveler .trip { font-size: 10px; opacity: .78; margin-top: 4px; }
+  .traveler .dates { font-size: 10.5px; opacity: .92; margin-top: 3px; }
+  .greeting { margin: 0 0 6px; padding: 6px 2px; color: #1a1714; font-size: 12px; font-style: normal; font-weight: 600; }
+  .route-strip { border: 1px solid #efe2dc; border-radius: 14px; padding: 8px 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px; background: linear-gradient(180deg,#fff,#fffaf7); }
+  .airport { flex: 1; min-width: 0; }
+  .airport.to { text-align: right; }
+  .code { font-family: 'Playfair Display', Georgia, serif; color: #e05a1c; font-size: 16px; font-weight: 700; letter-spacing: .02em; }
+  .airport-name { color: #7a7269; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .route-arrow { color: #c0392b; font-size: 18px; font-weight: 600; padding: 0 8px; }
+  .section { border: 1px solid #e9e0da; background: #fff; border-radius: 13px; padding: 8px 10px; margin-bottom: 6px; page-break-inside: avoid; }
+  .section h2 { margin: 0 0 6px; color: #e05a1c; font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; display: flex; align-items: center; gap: 5px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .mini-card, .transfer-card, .bag-col { background: #faf8f6; border: 1px solid #eee7e1; border-radius: 10px; padding: 7px 8px; min-width: 0; }
+  .flight-card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .flight-card .label { color: #7a7269; font-size: 8.5px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+  .flight-card .date { font-size: 13px; font-weight: 600; margin: 2px 0 1px; }
+  .flight-card .time { color: #e05a1c; font-size: 15px; font-weight: 700; white-space: nowrap; }
+  .flight-card .airport-line { margin-top: 3px; color: #625a52; font-size: 9.2px; }
+  .hotel-name { font-size: 13.5px; font-weight: 600; margin-bottom: 5px; }
+  .hotel-meta { display: flex; flex-wrap: wrap; gap: 4px; }
+  .badge { display: inline-flex; align-items: center; border-radius: 999px; background: #fff0e9; border: 1px solid #f0cbb9; color: #b84616; padding: 2px 7px; font-size: 9.2px; font-weight: 500; }
+  .timeline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .direction { color: #7a7269; font-size: 8.8px; text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+  .transfer-main { font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+  .transfer-details { color: #e05a1c; font-weight: 600; margin-top: 2px; }
+  .meeting { color: #625a52; font-size: 9.3px; margin-top: 3px; }
+  .carrier { margin-top: 6px; padding: 6px 8px; border-radius: 9px; background: #fff8f5; color: #625a52; border: 1px solid #f1d5c8; }
+  .kv .k { color: #7a7269; font-size: 8.3px; text-transform: uppercase; letter-spacing: .08em; font-weight: 600; margin-bottom: 2px; }
+  .kv .v { color: #1a1714; font-size: 10.7px; font-weight: 500; word-break: break-word; }
+  .soft { background: #fffaf8; }
+  .docs { display: flex; flex-wrap: wrap; gap: 4px; }
+  .docs span { background: #faf8f6; border: 1px solid #eee7e1; border-radius: 999px; padding: 3px 8px; font-size: 9.5px; color: #4d453e; }
+  .info-strip { display: grid; grid-template-columns: 1fr; gap: 5px; }
+  .important { background: #fff8f5; border: 1px solid #f1d5c8; border-radius: 10px; padding: 6px 8px; color: #625a52; font-size: 9.5px; }
+  .seat-box { background: #faf8f6; border: 1px solid #eee7e1; border-radius: 10px; padding: 6px 8px; }
+  .seat-box strong { color: #e05a1c; }
+  .baggage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 5px; }
+  .bag-head { display: flex; align-items: center; gap: 4px; color: #1a1714; font-size: 10.5px; font-weight: 600; margin-bottom: 5px; }
+  .bag-col .kv { margin-top: 4px; }
+  .farewell { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 12.5px; font-weight: 600; color: #e05a1c; padding: 2px 0 5px; }
+  .footer { border-top: 1px solid #e8e4df; padding-top: 5px; text-align: center; color: #1a1714; font-size: 9px; font-weight: 500; letter-spacing: .03em; }
+  @media print { body { width: 100%; } .memo { max-width: none; } }
+</style>
+</head>
+<body>
+  <main class="memo">
+    <header class="hero">
+      <div class="brand">
+        <img src="logo.png" alt="TourBonjour">
+        <div class="brand-copy">
+          <div class="doc-type">${esc(t.memoTitle)}</div>
+          <div class="route-small">${esc(routeFrom)} → ${esc(routeTo)}</div>
+        </div>
+      </div>
+      <div class="traveler">
+        <div class="name">${valueOrDash(d.tourists, t.memoTitle)}</div>
+        <div class="trip">${esc(t.tripTo)} ${valueOrDash(d.country, t.notSpecified)}</div>
+        <div class="dates">${valueOrDash(depart.date, '')} — ${valueOrDash(ret.date, '')}</div>
+      </div>
+    </header>
+
+    <div class="greeting">${esc(t.greeting)}</div>
+
+    <div class="route-strip">
+      <div class="airport from">
+        <div class="code">${esc(routeFrom)}</div>
+      </div>
+      <div class="route-arrow">✈</div>
+      <div class="airport to">
+        <div class="code">${esc(routeTo)}</div>
+      </div>
+    </div>
+
+    ${section(`✈ ${t.tourDetails}`, `
+      <div class="grid-2">
+        <div class="mini-card flight-card">
+          <div class="top"><div class="label">${esc(t.departure)}</div><div class="time">${valueOrDash(depart.time, '')}</div></div>
+          <div class="date">${valueOrDash(depart.date, t.notSpecified)}</div>
+          <div class="airport-line">${valueOrDash(d.departAirport, t.notSpecified)}</div>
+        </div>
+        <div class="mini-card flight-card">
+          <div class="top"><div class="label">${esc(t.returnFlight)}</div><div class="time">${valueOrDash(ret.time, '')}</div></div>
+          <div class="date">${valueOrDash(ret.date, t.notSpecified)}</div>
+          <div class="airport-line">${valueOrDash(d.arrivalAirport, t.notSpecified)}</div>
+        </div>
+      </div>`, '')}
+
+    ${section(`🏨 ${t.hotel}`, hotelInner, '')}
+
+    ${section(`🚐 ${t.transfer}`, transferInner, '')}
+
+    ${insuranceContacts.trim() ? section(`🛡️ ${t.insurance} / 📞 ${t.manager}`, `<div class="grid-2">${insuranceContacts}</div>`, '') : ''}
+
+    ${section(`📄 ${t.documents}`, `<div class="docs">${docs}</div>`, '')}
+
+    ${section(`✈ ${t.flightDetails}`, `
+      <div class="info-strip">
+        <div class="important"><strong>${esc(t.important)}:</strong> ${esc(t.importantText)}</div>
+        ${seatLine ? `<div class="seat-box"><strong>${esc(t.seats)}:</strong> ${seatLine}</div>` : ''}
+      </div>
+      <div class="baggage-grid">${bagCols}</div>`, '')}
+
+    ${section(`🗺️ ${t.nearbyPlaces}`, exists(d.nearbyPlaces) ? `<div style="white-space:pre-line; font-size:10.3px; line-height:1.5;">${esc(d.nearbyPlaces)}</div>` : '', '')}
+
+    <div class="farewell">${esc(t.farewell)}</div>
+    <footer class="footer">${esc(t.footer)}</footer>
+  </main>
+  <script>window.onload=function(){setTimeout(function(){window.print();},250)};<\/script>
+</body>
+</html>`;
+}
+
+
+
+// ── Country auto-detection ───────────────────────────
+const CITY_COUNTRY = {
+  'дублін': 'Ірландія', 'dublin': 'Ірландія',
+  'майорка': 'Іспанія', 'mallorca': 'Іспанія', 'пальма': 'Іспанія', 'palma': 'Іспанія',
+  'барселона': 'Іспанія', 'barcelona': 'Іспанія',
+  'мадрид': 'Іспанія', 'madrid': 'Іспанія',
+  'рим': 'Італія', 'rome': 'Італія', 'roma': 'Італія',
+  'мілан': 'Італія', 'milan': 'Італія', 'milano': 'Італія',
+  'париж': 'Франція', 'paris': 'Франція',
+  'лондон': 'Велика Британія', 'london': 'Велика Британія',
+  'варшава': 'Польща', 'warsaw': 'Польща',
+  'прага': 'Чехія', 'prague': 'Чехія',
+  'відень': 'Австрія', 'vienna': 'Австрія',
+  'амстердам': 'Нідерланди', 'amsterdam': 'Нідерланди',
+  'берлін': 'Німеччина', 'berlin': 'Німеччина',
+  'афіни': 'Греція', 'athens': 'Греція',
+  'хургада': 'Єгипет', 'hurghada': 'Єгипет',
+  'шарм': 'Єгипет', 'sharm': 'Єгипет',
+  'анталія': 'Туреччина', 'antalya': 'Туреччина',
+  'стамбул': 'Туреччина', 'istanbul': 'Туреччина',
+  'дубай': 'ОАЕ', 'dubai': 'ОАЕ',
+  'бангкок': 'Таїланд', 'bangkok': 'Таїланд',
+  'балі': 'Індонезія', 'bali': 'Індонезія',
+  'нью-йорк': 'США', 'new york': 'США',
+  'лісабон': 'Португалія', 'lisbon': 'Португалія',
+  'будапешт': 'Угорщина', 'budapest': 'Угорщина',
+  'київ': 'Україна', 'kyiv': 'Україна',
+  'львів': 'Україна', 'lviv': 'Україна',
+};
+
+function detectCountry(cityStr) {
+  if (!cityStr) return '';
+  const low = cityStr.toLowerCase().trim();
+  for (const [key, country] of Object.entries(CITY_COUNTRY)) {
+    if (low.includes(key)) return country;
+  }
+  return '';
+}
+
+function formatCityWithCountry(cityStr) {
+  if (!cityStr) return cityStr;
+  const country = detectCountry(cityStr);
+  if (country && !cityStr.includes(country)) return cityStr + ', ' + country;
+  return cityStr;
+}
+
+// ── Auto-fill transfer dates from depart/return ──────
+function extractDate(val) {
+  if (!val) return '';
+  const m = val.trim().match(/^(\d{2}\.\d{2}\.\d{4})/);
+  return m ? m[1] : val.split(',')[0].trim();
+}
+
+function autoFillTransferDates() {
+  const departVal = (document.getElementById('f-depart')||{}).value||'';
+  const retVal = (document.getElementById('f-return')||{}).value||'';
+  const inDate = document.getElementById('f-transfer-in-date');
+  const outDate = document.getElementById('f-transfer-out-date');
+
+  // Transfer IN date = day after departure (arrival day)
+  const dStr = extractDate(departVal);
+  if (dStr && inDate) {
+    const parts = dStr.split('.');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])+1);
+      inDate.value = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+    }
+  }
+
+  // Transfer OUT date = return date
+  const rStr = extractDate(retVal);
+  if (rStr && outDate) outDate.value = rStr;
+
+  // Auto-fill airports with country
+  const depAirport = document.getElementById('f-depart-airport');
+  const arrAirport = document.getElementById('f-arrival-airport');
+  const country = document.getElementById('f-country');
+  if (depAirport && depAirport.value) {
+    depAirport.value = formatCityWithCountry(depAirport.value);
+  }
+  if (arrAirport && arrAirport.value) {
+    arrAirport.value = formatCityWithCountry(arrAirport.value);
+  }
+  if (country && country.value) {
+    country.value = formatCityWithCountry(country.value);
+  }
+}
+
+['f-depart','f-return'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', function() {
+    autoFillTransferDates();
+    autoFillHotelDates();
+  });
+});
+['f-depart-airport','f-arrival-airport','f-country'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('blur', autoFillTransferDates);
+});
+
+// ── Auto-fill hotel check-in / check-out ─────────────
+function autoFillHotelDates() {
+  const departVal = (document.getElementById('f-depart')||{}).value||'';
+  const retVal = (document.getElementById('f-return')||{}).value||'';
+  const checkin = document.getElementById('f-hotel-checkin');
+  const checkout = document.getElementById('f-hotel-checkout');
+
+  // Extract date part before comma
+  function getDate(val) {
+    const m = val.trim().match(/^(\d{2}\.\d{2}\.\d{4})/);
+    return m ? m[1] : val.split(',')[0].trim();
+  }
+
+  // Check-in = next day after departure (arrival day)
+  const dStr = getDate(departVal);
+  if (dStr && checkin && !checkin._manuallyEdited) {
+    const parts = dStr.split('.');
+    if (parts.length === 3) {
+      const d = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])+1);
+      const nextDay = String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+      checkin.value = nextDay + ' після 14:00';
+    }
+  }
+
+  // Check-out = return date
+  const rStr = getDate(retVal);
+  if (rStr && checkout && !checkout._manuallyEdited) {
+    checkout.value = rStr + ' до 12:00';
+  }
+}
+
+// Mark as manually edited if user types in the field
+['f-hotel-checkin','f-hotel-checkout'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', function() { this._manuallyEdited = true; });
+});
+
+
+
+function showStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status ' + type;
+}
+</script>
+</body>
+</html>
