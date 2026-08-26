@@ -184,7 +184,8 @@
 
       <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px;">
         <button type="button" id="nearby-btn" onclick="findNearbyPlaces()"
-          style="width:100%; padding:9px; font-family:'Jost',sans-serif; font-size:13px; border:1px dashed var(--border-strong); border-radius:var(--radius-sm); background:none; color:var(--text-muted); cursor:pointer;">
+          style="width:100%; padding:9px; font-family:'Jost',sans-serif; font-size:13px; font-weight:500; border:none; border-radius:var(--radius-sm); background:linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%); color:#fff; cursor:pointer; transition:opacity 0.15s;"
+          onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">
           🗺️ Знайти цікаві місця поруч з готелем
         </button>
         <label class="field-label" style="margin-top:8px;">Цікаві місця поруч (можна відредагувати)</label>
@@ -494,7 +495,14 @@ async function findNearbyPlaces() {
   const originalText = btn.textContent;
   btn.textContent = '🔍 Шукаю...';
 
-  const prompt = `Знайди 4-5 цікавих туристичних місць поруч з готелем "${hotel}" ${place ? `у ${place}` : ''}. Для кожного вкажи назву, приблизну відстань від готелю та коротке (1 речення) пояснення чому варто відвідати. Формат кожного пункту: "1. Назва (відстань) — пояснення" на одному рядку. Не додавай жодних вступних фраз на кшталт "Ось готовий текст" чи заголовків — почни ОДРАЗУ з пункту "1.". Без markdown-зірочок, без JSON, без прочерків-роздільників, без порожніх рядків між заголовком і списком.`;
+  const prompt = `Знайди 4-5 цікавих туристичних місць поруч з готелем "${hotel}" ${place ? `у ${place}` : ''}. Для кожного вкажи назву, приблизну відстань від готелю та коротке (1 речення) пояснення чому варто відвідати.
+
+СУВОРО дотримуйся формату — кожен пункт ОДНИМ суцільним рядком без переносу після номера:
+1. Назва (відстань) — пояснення.
+
+2. Назва (відстань) — пояснення.
+
+Номер і текст пункту завжди в одному рядку, без переносу рядка між "1." і назвою. Між пунктами — рівно один порожній рядок. Не додавай вступних фраз чи заголовків — почни ОДРАЗУ з "1.". Без markdown-зірочок, без JSON.`;
 
   try {
     const res = await fetch(PROXY_URL, {
@@ -513,12 +521,21 @@ async function findNearbyPlaces() {
     const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
     let result = textBlocks.join('\n').trim();
 
-    // Подстраховка: убираем вступительные фразы/пустые строки/одиночные тире до первого пункта списка
-    const lines = result.split('\n');
+    // Подстраховка: убираем вступительные фразы до первого пункта списка
+    let lines = result.split('\n');
     const firstItemIdx = lines.findIndex(l => /^\s*\d+[.)]/.test(l));
     if (firstItemIdx > 0) {
-      result = lines.slice(firstItemIdx).join('\n').trim();
+      lines = lines.slice(firstItemIdx);
     }
+
+    // Склеиваем всё обратно и разбиваем по номерам пунктов заново,
+    // чтобы гарантировать формат "N. Текст" на одній лінії з одним порожнім рядком між пунктами
+    const joined = lines.join('\n').trim();
+    const items = joined
+      .split(/\n?\s*(?=\d+[.)]\s)/)
+      .map(s => s.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    result = items.join('\n\n');
 
     if (!result) throw new Error('Порожня відповідь від AI');
     document.getElementById('f-nearby-places').value = result;
