@@ -227,12 +227,6 @@
       <div><label class="field-label">Менеджер ТурБонжур</label><input id="f-manager" type="text" placeholder="Ваше ім'я, +38098 89 000 72" value="+38098 89 000 72"></div>
     </div>
 
-    <!-- Documents -->
-    <div class="card">
-      <div class="card-title"><span class="ico">📄</span> Документи</div>
-      <textarea id="f-documents" rows="2">Паспорт, страховка, ваучер, квитки, дозвіл для дитини, якщо потрібно.</textarea>
-    </div>
-
     <!-- Seats -->
     <div class="card">
       <div class="card-title"><span class="ico">💺</span> Місця в літаку</div>
@@ -390,7 +384,7 @@ async function parseScreenshots() {
     ...imageContents.map(({base64, type}) => ({ type: 'image', source: { type: 'base64', media_type: type, data: base64 } })),
     { type: 'text', text: `Розпізнай дані туристичної заявки з цих скриншотів та поверни ЛИШЕ JSON без пояснень та markdown:
 {
-  "tourists": "ПІБ туристів",
+  "tourists": "ПІБ туристів через кому (ТІЛЬКИ ім'я та прізвище кожного, у форматі як в основному документі — латиницею або кирилицею. НІКОЛИ не додавай дату народження, номер паспорта чи термін дії паспорта — навіть якщо вони видно на скріншоті поруч з іменем)",
   "country": "країна/напрямок",
   "depart": "дата та час вильоту",
   "return": "дата та час повернення",
@@ -408,7 +402,6 @@ async function parseScreenshots() {
 
   "insurance": "страховка",
   "manager": "менеджер",
-  "documents": "документи",
   "seats_auto": "автоматичне призначення місць під час реєстрації",
   "seats_together": "місця поруч / не поруч / докуплені"
 }
@@ -424,6 +417,16 @@ async function parseScreenshots() {
     if (data.error) throw new Error(data.error.message);
     const raw = data.content[0].text.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(raw);
+    // Подстраховка: якщо AI все ж додав паспорт/дату народження в поле tourists — вирізаємо
+    if (parsed.tourists) {
+      parsed.tourists = parsed.tourists
+        .replace(/\([^)]*\d{2}[.\/]\d{2}[.\/]\d{2,4}[^)]*\)/g, '') // (дд.мм.рррр, паспорт ...)
+        .replace(/,?\s*паспорт[^,]*(?=,|$)/gi, '')
+        .replace(/,?\s*passport[^,]*(?=,|$)/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s*,\s*,/g, ',')
+        .trim();
+    }
     const map = {
       tourists:'f-tourists',
       country:'f-country',
@@ -441,7 +444,6 @@ async function parseScreenshots() {
       // carrier not auto-filled
       insurance:'f-insurance',
       manager:'f-manager',
-      documents:'f-documents',
       seats_auto:'f-seats-auto',
       seats_together:'f-seats-together'
     };
@@ -492,7 +494,7 @@ async function findNearbyPlaces() {
   const originalText = btn.textContent;
   btn.textContent = '🔍 Шукаю...';
 
-  const prompt = `Знайди 4-5 цікавих туристичних місць поруч з готелем "${hotel}" ${place ? `у ${place}` : ''}. Для кожного вкажи назву, приблизну відстань від готелю та коротке (1 речення) пояснення чому варто відвідати. Поверни ЛИШЕ звичайний текст у форматі списку, без markdown-зірочок, без JSON, без пояснень — просто готовий текст для вставки в пам'ятку туриста українською мовою.`;
+  const prompt = `Знайди 4-5 цікавих туристичних місць поруч з готелем "${hotel}" ${place ? `у ${place}` : ''}. Для кожного вкажи назву, приблизну відстань від готелю та коротке (1 речення) пояснення чому варто відвідати. Формат кожного пункту: "1. Назва (відстань) — пояснення" на одному рядку. Не додавай жодних вступних фраз на кшталт "Ось готовий текст" чи заголовків — почни ОДРАЗУ з пункту "1.". Без markdown-зірочок, без JSON, без прочерків-роздільників, без порожніх рядків між заголовком і списком.`;
 
   try {
     const res = await fetch(PROXY_URL, {
@@ -509,7 +511,14 @@ async function findNearbyPlaces() {
     if (data.error) throw new Error(data.error.message);
 
     const textBlocks = (data.content || []).filter(b => b.type === 'text').map(b => b.text);
-    const result = textBlocks.join('\n').trim();
+    let result = textBlocks.join('\n').trim();
+
+    // Подстраховка: убираем вступительные фразы/пустые строки/одиночные тире до первого пункта списка
+    const lines = result.split('\n');
+    const firstItemIdx = lines.findIndex(l => /^\s*\d+[.)]/.test(l));
+    if (firstItemIdx > 0) {
+      result = lines.slice(firstItemIdx).join('\n').trim();
+    }
 
     if (!result) throw new Error('Порожня відповідь від AI');
     document.getElementById('f-nearby-places').value = result;
@@ -554,7 +563,6 @@ function generateMemo() {
     carrier: get('f-carrier').trim(),
     insurance: get('f-insurance').trim(),
     manager: get('f-manager').trim(),
-    documents: (get('f-documents').trim() || t.defaultDocs),
     seatsAuto: get('f-seats-auto').trim(),
     seatsTogether: get('f-seats-together').trim(),
     personalWt: get('f-personal-wt').trim(),
@@ -795,13 +803,6 @@ function buildPremiumMemoHtml(d, t, lang) {
   const routeTo = cityWithCountry(d.arrivalAirport, d.arrivalCity, d.arrivalCountry);
   const baseHref = window.location.href.replace(/[^\/]*$/, '');
 
-  const docs = String(d.documents || t.defaultDocs)
-    .split(/[,;\n]/)
-    .map(x => x.trim())
-    .filter(Boolean)
-    .map(x => `<span>${esc(x)}</span>`)
-    .join('');
-
   const seatLine = [d.seatsAuto, d.seatsTogether].filter(exists).map(esc).join(' · ');
 
   const bagCols = [
@@ -959,8 +960,6 @@ function buildPremiumMemoHtml(d, t, lang) {
     ${section(`🚐 ${t.transfer}`, transferInner, '')}
 
     ${insuranceContacts.trim() ? section(`🛡️ ${t.insurance} / 📞 ${t.manager}`, `<div class="grid-2">${insuranceContacts}</div>`, '') : ''}
-
-    ${section(`📄 ${t.documents}`, `<div class="docs">${docs}</div>`, '')}
 
     ${section(`✈ ${t.flightDetails}`, `
       <div class="info-strip">
