@@ -140,5 +140,23 @@ footer{padding:22px max(5vw,16px);font-size:14px;color:var(--muted);text-align:c
   btns.forEach(b=>b.addEventListener('click',()=>apply(b.dataset.f)));
 }
 </script>
+<script>
+/* Auto-height for embedding on tourbonjour.com: send page height to parent */
+(function(){
+  if(window.parent===window)return;
+  var last=0;
+  function send(){
+    var b=document.body,cs=getComputedStyle(b);var hgt=Math.ceil(b.getBoundingClientRect().height+parseFloat(cs.marginTop)+parseFloat(cs.marginBottom));
+    if(Math.abs(hgt-last)<2)return;
+    last=hgt;
+    window.parent.postMessage({tbGuideHeight:hgt},'*');
+  }
+  window.addEventListener('load',send);
+  window.addEventListener('resize',send);
+  if(window.ResizeObserver)new ResizeObserver(send).observe(document.body);
+  document.querySelectorAll('img').forEach(function(i){i.addEventListener('load',send)});
+  send();
+})();
+</script>
 </body>
 </html>
