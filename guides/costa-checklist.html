@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Чек-лист круїзу Costa Smeralda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: тепло, як менеджер ТурБонжур, що знає клієнта; коротко і по ділу
+   IDEA: маршрут підготовки — від дому до першого порту, зупинки як кільця з точкою з «O» логотипа
+   PICTURE: велике кільце готовності + лінія маршруту з 6 зупинок, що заповнюються
+   COLOUR and TYPE: жовте поле шапки, синій основний, червоний точково; Jost 600/400
+   LAYOUT: шапка-поле, маршрут, далі етапи-картки з чекбоксами, внизу — ключові факти з ефіру */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#10172a);--warm:light-dark(#fffbe6,#18213a);--ink:light-dark(#1b2540,#eef1f8);
+--muted:light-dark(#5b6478,#a7b0c4);--blue:light-dark(#2a4e9c,#93b2f2);--red:light-dark(#e4232c,#ff6a6f);
+--redd:light-dark(#c81d25,#ff8a8e);--yel:#ffd710;--line:light-dark(#e3e6ee,#2a3552);--card:light-dark(#ffffff,#141c31);
+--hero:light-dark(#ffd710,#1c2645);--heroink:light-dark(#1b2540,#ffffff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Jost",system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:clip}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-weight:600;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,5vw,46px)}h2{font-size:24px;font-weight:500;color:var(--blue)}h3{font-size:18px;font-weight:600}
+.hero{background:var(--hero);color:var(--heroink)}
+.hero .tag{font-size:14px;letter-spacing:.6em;text-transform:lowercase;color:var(--blue);margin:0 0 14px}
+:root:not([data-theme=dark]) .hero .tag{color:#2a4e9c}
+.hero p.lead{max-width:60ch;margin:14px 0 0;font-size:17px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:9999px;background:var(--card);color:var(--ink);font-size:14px;white-space:nowrap}
+.top{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:32px;align-items:center}
+.ring{position:relative;width:200px;height:200px;justify-self:end}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .pct{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.ring b{font-size:46px;font-weight:600;line-height:1}.ring small{font-size:14px;color:var(--muted)}
+:root:not([data-theme=dark]) .hero .ring small{color:#1b2540}
+.arc{transition:stroke-dashoffset .6s ease}
+/* маршрут */
+.route{background:var(--warm);border-bottom:1px solid var(--line)}
+.stops{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));position:relative}
+.stops:before{content:"";position:absolute;left:8%;right:8%;top:22px;height:3px;background:var(--line);border-radius:3px}
+.stops li{position:relative;text-align:center}
+.stops a{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--ink);text-decoration:none;font-size:14px;line-height:1.25;padding:0 4px;min-height:44px}
+.dot{width:46px;height:46px;border-radius:50%;border:5px solid var(--blue);background:var(--card);display:grid;place-items:center;position:relative}
+.dot:after{content:"";width:12px;height:12px;border-radius:50%;background:var(--red);transform:scale(.0);transition:transform .3s}
+.stops li.part .dot:after{transform:scale(.6)}
+.stops li.done .dot{background:var(--blue)}.stops li.done .dot:after{transform:scale(1)}
+.stops .n{font-size:13px;color:var(--muted)}
+/* панель */
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:24px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9999px;padding:4px;gap:4px}
+button{font:inherit;cursor:pointer}
+.seg button{border:0;background:none;color:var(--ink);padding:8px 16px;border-radius:9999px;min-height:40px}
+.seg button[aria-pressed=true]{background:var(--blue);color:var(--bg)}
+.ghost{border:1px solid var(--line);background:var(--card);color:var(--muted);padding:9px 18px;border-radius:9999px;min-height:44px}
+button:focus-visible,input:focus-visible+.box,a:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+.confirm{display:none;gap:8px;align-items:center;font-size:14px}.confirm.on{display:flex}
+.confirm .yes{background:var(--red);color:#fff;border:0;padding:9px 16px;border-radius:9999px;min-height:44px}
+/* етапи */
+.phase{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:clamp(18px,3vw,28px);margin-bottom:24px;scroll-margin-top:16px}
+.ph-head{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.when{color:var(--muted);font-size:14px;margin:4px 0 0}
+.count{font-size:14px;white-space:nowrap;padding:4px 12px;border-radius:9999px;background:var(--warm);color:var(--ink)}
+.phase.complete .count{background:var(--blue);color:var(--bg)}
+ul.items{list-style:none;margin:12px 0 0;padding:0}
+ul.items li{border-top:1px solid var(--line)}
+ul.items li:first-child{border-top:0}
+label.it{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;padding:12px 0;cursor:pointer;align-items:start}
+label.it input{position:absolute;opacity:0;width:1px;height:1px}
+.box{width:26px;height:26px;border-radius:50%;border:3px solid var(--blue);display:grid;place-items:center;margin-top:1px}
+.box:after{content:"";width:10px;height:10px;border-radius:50%;background:var(--red);transform:scale(0);transition:transform .2s}
+input:checked+.box{background:var(--blue)}input:checked+.box:after{transform:scale(1)}
+input:checked~.tx .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.t{display:block}.nt{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+.flag{display:inline-block;font-size:13px;color:var(--redd);margin-top:4px}
+.hide-done li.is-done{display:none}
+.hide-done .phase.complete{display:none}
+.empty{display:none;text-align:center;color:var(--muted);padding:24px}
+.hide-done .empty.show{display:block}
+.no{margin:16px 0 0;padding:14px 16px;border-radius:12px;background:var(--warm);font-size:15px}
+.no b{color:var(--redd);font-weight:600}
+/* факти */
+.facts{background:var(--warm)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin-top:24px}
+.fact{background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--line)}
+.big{font-size:40px;font-weight:600;color:var(--blue);line-height:1;white-space:nowrap}
+.fact p{margin:8px 0 0;font-size:15px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:14px}
+td.v{white-space:nowrap;font-weight:500}.free{color:var(--blue)}.paid{color:var(--redd)}
+.two{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;margin-top:24px;max-width:640px}
+.rule{background:var(--blue);color:var(--bg);border-radius:16px;padding:clamp(20px,3vw,32px);margin-top:24px}
+.rule h3{font-size:24px;color:inherit}
+.time{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.time li{border-top:3px solid currentColor;padding-top:8px;font-size:15px}
+.time li.aa{border-color:var(--yel)}
+.time b{display:block;font-size:24px;font-weight:600;white-space:nowrap}
+.small{font-size:14px;color:var(--muted)}
+footer{text-align:center}
+footer p{margin:6px 0}
+@media(max-width:760px){.grid,.two{grid-template-columns:minmax(0,1fr)}.time{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.top{grid-template-columns:minmax(0,1fr)}.ring{justify-self:start;width:160px;height:160px}.ring b{font-size:38px}
+.stops{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:18px}.stops:before{display:none}
+table{font-size:14px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero band">
+  <div class="wrap top">
+    <div>
+      <p class="tag">travel family</p>
+      <h1>Підсумки зустрічі з Costa Cruises — ваш чек-лист</h1>
+      <p class="lead">Усе, про що говорили з представником Costa, зібрали в один список. Відмічайте пункти — прогрес збережеться на цьому пристрої.</p>
+      <div class="meta">
+        <span class="pill">Costa Smeralda</span>
+        <span class="pill">30.11 – 07.12.2026</span>
+        <span class="pill">Канари та Мадейра</span>
+        <span class="pill">Посадка: Санта-Крус-де-Тенерифе</span>
+      </div>
+    </div>
+    <div class="ring" aria-live="polite">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="var(--card)" stroke-width="14"/>
+        <circle class="arc" id="arc" cx="60" cy="60" r="50" fill="none" stroke="var(--blue)" stroke-width="14" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+      </svg>
+      <div class="pct"><b id="pct">0%</b><small id="cnt">готово</small></div>
+    </div>
+  </div>
+</header>
+
+<nav class="route band" aria-label="Етапи підготовки">
+  <div class="wrap"><ol class="stops" id="stops"></ol></div>
+</nav>
+
+<main class="band">
+  <div class="wrap" id="list">
+    <div class="bar">
+      <div class="seg" role="group" aria-label="Показати">
+        <button id="fAll" aria-pressed="true">Усі пункти</button>
+        <button id="fLeft" aria-pressed="false">Лише невиконані</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button class="ghost" id="reset">Скинути відмітки</button>
+        <span class="confirm" id="confirm">Скинути все?
+          <button class="yes" id="yes">Так</button><button class="ghost" id="nope">Ні</button></span>
+      </div>
+    </div>
+    <div id="phases"></div>
+    <p class="empty" id="empty">Усе відмічено — ви готові до круїзу. До зустрічі на борту.</p>
+  </div>
+</main>
+
+<section class="facts band" id="facts">
+  <div class="wrap">
+    <h2>Що варто знати: ключове з ефіру</h2>
+    <p class="small">Суми та ліміти озвучила представник Costa під час зустрічі. Точні умови для вашого бронювання підтвердить ваш менеджер ТурБонжур.</p>
+
+    <div class="grid">
+      <div class="fact"><div class="big">€11</div><p>Сервісний збір (чайові) на дорослого за добу. За 7 ночей — <b>€77</b> на одного, <b>€154</b> на двох. Нараховується на рахунок, якщо не сплачений заздалегідь.</p></div>
+      <div class="fact"><div class="big">€2,50–3,50</div><p>Орієнтовна ціна чашки кави в барі без пакета напоїв.</p></div>
+      <div class="fact"><div class="big">0,5 л</div><p>Бутильована вода в пакеті напоїв може бути обмежена — йшлося про одну пляшку на людину на день. Перевірте умови свого пакета.</p></div>
+    </div>
+
+    <div class="two">
+      <div class="fact">
+        <h3>Напої без пакета</h3>
+        <table class="stack">
+          <thead><tr><th>Напій</th><th>Ціна</th></tr></thead>
+          <tbody>
+            <tr><td>Питна вода з диспенсерів у буфеті</td><td class="v free">Безкоштовно</td></tr>
+            <tr><td>Чай і фільтр-кава на сніданку</td><td class="v free">Безкоштовно</td></tr>
+            <tr><td>Бутильована вода</td><td class="v paid">Платно</td></tr>
+            <tr><td>Еспресо, капучино, лате в барах</td><td class="v paid">Платно</td></tr>
+            <tr><td>Coca-Cola, Fanta та інші напої</td><td class="v paid">Платно</td></tr>
+            <tr><td>Вино, пиво, коктейлі</td><td class="v paid">Платно</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="rule">
+      <h3>Головне правило: ніколи не запізнюйтеся на лайнер</h3>
+      <p style="margin:8px 0 0">All Aboard і відправлення — це різний час. Лайнер не зобов'язаний чекати тих, хто запізнився із самостійної екскурсії.</p>
+      <ol class="time">
+        <li><b>09:00</b>Прибуття в порт</li>
+        <li><b>17:00</b>Повертаємося з запасом</li>
+        <li class="aa"><b>17:30</b>All Aboard — останній час на борт</li>
+        <li><b>18:00</b>Відправлення</li>
+      </ol>
+      <p style="margin:14px 0 0;font-size:14px;opacity:.85">Час умовний, для прикладу. Фактичний графік перевіряйте щодня і звіряйтеся з часом на лайнері.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="band">
+  <div class="wrap">
+    <p><b>Не намагайтеся побачити все в перший день.</b> Попереду цілий тиждень.</p>
+    <p class="small">Час посадки, зустрічі групи та екскурсії — у нашому груповому чаті. З любов'ю, команда ТурБонжур</p>
+  </div>
+</footer>
+
+<script>
+{
+const P=[
+{id:"docs",short:"Документи",title:"Документи та реєстрація",when:"Зараз, до виїзду",items:[
+ ["Перевірити термін дії закордонного паспорта"],
+ ["Підготувати документи про законне перебування в Європі","Якщо ви проживаєте за межами України"],
+ ["Зробити копії паспортів"],
+ ["Завантажити й роздрукувати круїзні документи"],
+ ["Роздрукувати багажні бірки","Краще на цупкому папері"],
+ ["Перевірити, чи є пакет напоїв у вашому бронюванні","За потреби замовте його у своєму кабінеті Costa Cruises"],
+ ["Перевірити, чи покриває медичне страхування круїз"]
+]},
+{id:"apps",short:"Телефон",title:"Телефон і зв'язок",when:"За кілька днів до виїзду",items:[
+ ["Встановити застосунок Costa Cruises","На борту працює через мережу лайнера без купівлі інтернету"],
+ ["Зберегти потрібні документи, музику, фільми офлайн"],
+ ["Зберегти контакт свого менеджера ТурБонжур"],
+ ["Підготувати банківську картку та готівку в євро"]
+]},
+{id:"bag",short:"Валіза",title:"Збираємо валізу",when:"Напередодні",items:[
+ ["Легкий літній одяг і гарний одяг для вечері"],
+ ["Білий образ для White Party"],
+ ["Купальник","Є критий басейн із підігрівом"],
+ ["Теплу кофту та вітровку","У морі на відкритих палубах вітряно й прохолодно"],
+ ["Зручне взуття для екскурсій і невеликий рюкзак"],
+ ["Сонцезахисні окуляри та крем"],
+ ["Особисту аптечку","Регулярні ліки, від захитування, головного болю, розладів травлення"],
+ ["Багаторазову пляшку для води","Питна вода в буфеті безкоштовна"],
+ ["Зарядки та павербанк"],
+ ["Позначити валізу яскравою стрічкою і прикріпити бірки з номером каюти"]
+],no:"<b>Не беріть праску</b> — на борту є платне прання й прасування, пакети для пральні є в каюті. Рушники надаються."},
+{id:"hand",short:"Ручна поклажа",title:"Ручна поклажа на день посадки",when:"Ранок посадки",items:[
+ ["Паспорт і круїзні документи"],
+ ["Гроші, банківська картка, телефон і зарядка"],
+ ["Ліки та цінні речі","Ніколи не кладіть їх у валізу, яку здаєте"],
+ ["Купальник і змінний одяг","Валізу можуть принести до каюти через кілька годин"]
+]},
+{id:"board",short:"Посадка",title:"День посадки і перший вечір",when:"30 листопада, Санта-Крус-де-Тенерифе",items:[
+ ["Приїхати до термінала о 15:00","Початок чекіну групи"],
+ ["Здати великі валізи з бірками"],
+ ["Пройти реєстрацію та контроль","Можуть сфотографувати для ідентифікації"],
+ ["Отримати Costa Card","Ключ, гаманець, перепустка і документ на борту. У кожного своя, передавати не можна"],
+ ["Пройти інструктаж із безпеки — Muster Drill","Місце збору — на картці. Без нього картку можуть заблокувати"],
+ ["Прив'язати банківську картку або внести готівку через термінал на лайнері"],
+ ["Перевірити на картці свій ресторан, час вечері та столик","Вечері в кілька змін — приходьте вчасно"],
+ ["Пообідати в буфеті на 8 палубі, поки готується каюта"],
+ ["Знайти Colosseo — атріум на три палуби, головний орієнтир"],
+ ["Подивитися програму заходів на вечір у застосунку"]
+]},
+{id:"port",short:"Порти",title:"Кожен день у порту",when:"Під час круїзу",items:[
+ ["Звірити час All Aboard на сьогодні","Звіряйтеся з часом на лайнері"],
+ ["Взяти Costa Card і документ, що посвідчує особу"],
+ ["Взяти телефон, гроші, воду та контакти організаторів"],
+ ["Закласти запас часу на дорогу і контроль на поверненні"],
+ ["У морі увімкнути авіарежим","Щоб уникнути дорогого морського роумінгу, і підключатися лише до Wi-Fi лайнера"]
+],repeat:true}
+];
+const KEY="tb-costa-smeralda-2026-checklist-v2";
+let st={};try{st=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}};
+const esc=s=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+
+$("phases").innerHTML=P.map((p,pi)=>`
+<section class="phase" id="${p.id}">
+ <div class="ph-head"><div><h2>${pi+1}. ${esc(p.title)}</h2><p class="when">${esc(p.when)}${p.repeat?" · відмічайте щодня заново":""}</p></div>
+ <span class="count" id="c-${p.id}"></span></div>
+ <ul class="items">${p.items.map((it,i)=>`<li id="li-${p.id}-${i}"><label class="it"><input type="checkbox" data-k="${p.id}-${i}"><span class="box"></span>
+ <span class="tx"><span class="t">${esc(it[0])}</span>${it[1]?`<span class="nt">${esc(it[1])}</span>`:""}</span></label></li>`).join("")}</ul>
+ ${p.no?`<p class="no">${p.no}</p>`:""}
+</section>`).join("");
+
+$("stops").innerHTML=P.map((p,i)=>`<li id="s-${p.id}"><a href="#${p.id}"><span class="dot"></span><span>${esc(p.short)}</span><span class="n" id="sn-${p.id}"></span></a></li>`).join("");
+
+const update=()=>{
+ let all=0,done=0,openPhases=0;
+ P.forEach(p=>{
+  let d=0;p.items.forEach((_,i)=>{const k=p.id+"-"+i,on=!!st[k];if(on)d++;$("li-"+k).classList.toggle("is-done",on)});
+  all+=p.items.length;done+=d;
+  const full=d===p.items.length;if(!full)openPhases++;
+  $("c-"+p.id).textContent=full?"Готово":d+" з "+p.items.length;
+  $(p.id).classList.toggle("complete",full);
+  const s=$("s-"+p.id);s.classList.toggle("done",full);s.classList.toggle("part",d>0&&!full);
+  $("sn-"+p.id).textContent=d+"/"+p.items.length;
+ });
+ const pct=Math.round(done/all*100);
+ $("pct").textContent=pct+"%";$("cnt").textContent=done+" з "+all+" готово";
+ $("arc").style.strokeDashoffset=314.16*(1-done/all);
+ $("empty").classList.toggle("show",openPhases===0);
+};
+
+document.querySelectorAll("input[data-k]").forEach(b=>{
+ b.checked=!!st[b.dataset.k];
+ b.addEventListener("change",()=>{if(b.checked)st[b.dataset.k]=1;else delete st[b.dataset.k];save();update()});
+});
+
+const setF=left=>{$("list").classList.toggle("hide-done",left);$("fAll").setAttribute("aria-pressed",!left);$("fLeft").setAttribute("aria-pressed",left)};
+$("fAll").onclick=()=>setF(false);$("fLeft").onclick=()=>setF(true);
+$("reset").onclick=()=>{$("confirm").classList.add("on");$("reset").style.display="none"};
+const close=()=>{$("confirm").classList.remove("on");$("reset").style.display=""};
+$("nope").onclick=close;
+$("yes").onclick=()=>{st={};save();document.querySelectorAll("input[data-k]").forEach(b=>b.checked=false);update();close()};
+update();
+}
+</script>
+</body>
+</html>
